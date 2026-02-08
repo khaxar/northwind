@@ -1,0 +1,97 @@
+-- 1. List all orders with customer, employee, and shipper
+SELECT 
+    o.OrderID,
+    c.CompanyName AS Customer,
+    e.FirstName || ' ' || e.LastName AS Employee,
+    s.CompanyName AS Shipper,
+    o.OrderDate,
+    o.ShippedDate,
+    o.Freight
+FROM orders o
+JOIN customers c ON o.CustomerID = c.CustomerID
+JOIN employees e ON o.EmployeeID = e.EmployeeID
+JOIN shippers s ON o.ShipVia = s.ShipperID
+ORDER BY o.OrderDate DESC
+LIMIT 20;
+
+-- 2. Products with category and supplier
+SELECT 
+    p.ProductName,
+    c.CategoryName,
+    s.CompanyName AS Supplier,
+    p.UnitPrice,
+    p.UnitsInStock
+FROM products p
+JOIN categories c ON p.CategoryID = c.CategoryID
+JOIN suppliers s ON p.SupplierID = s.SupplierID
+ORDER BY p.ProductName
+LIMIT 20;
+
+-- 3. Total orders per customer
+SELECT 
+    c.CompanyName,
+    COUNT(o.OrderID) AS TotalOrders,
+    SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) AS TotalSpent
+FROM customers c
+JOIN orders o ON c.CustomerID = o.CustomerID
+JOIN order_details od ON o.OrderID = od.OrderID
+GROUP BY c.CompanyName
+ORDER BY TotalSpent DESC
+LIMIT 10;
+
+-- 4. Total sales per product
+SELECT 
+    p.ProductName,
+    SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) AS TotalSales,
+    SUM(od.Quantity) AS TotalUnitsSold
+FROM products p
+JOIN order_details od ON p.ProductID = od.ProductID
+GROUP BY p.ProductName
+ORDER BY TotalSales DESC
+LIMIT 10;
+
+-- 5. Total sales per employee
+SELECT 
+    e.FirstName || ' ' || e.LastName AS Employee,
+    COUNT(o.OrderID) AS OrdersHandled,
+    SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) AS TotalSales
+FROM employees e
+JOIN orders o ON e.EmployeeID = o.EmployeeID
+JOIN order_details od ON o.OrderID = od.OrderID
+GROUP BY e.EmployeeID
+ORDER BY TotalSales DESC
+LIMIT 10;
+
+-- 6. Customers who never ordered
+SELECT c.CompanyName
+FROM customers c
+LEFT JOIN orders o ON c.CustomerID = o.CustomerID
+WHERE o.OrderID IS NULL
+ORDER BY c.CompanyName;
+
+-- 7. Orders with product details
+SELECT 
+    o.OrderID,
+    c.CompanyName AS Customer,
+    p.ProductName,
+    od.Quantity,
+    od.UnitPrice,
+    od.Discount,
+    (od.UnitPrice * od.Quantity * (1 - od.Discount)) AS LineTotal
+FROM orders o
+JOIN customers c ON o.CustomerID = c.CustomerID
+JOIN order_details od ON o.OrderID = od.OrderID
+JOIN products p ON od.ProductID = p.ProductID
+ORDER BY o.OrderID, LineTotal DESC
+LIMIT 20;
+
+-- 8. Top 5 products per category by sales
+SELECT 
+    c.CategoryName,
+    p.ProductName,
+    SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) AS TotalSales
+FROM products p
+JOIN categories c ON p.CategoryID = c.CategoryID
+JOIN order_details od ON p.ProductID = od.ProductID
+GROUP BY c.CategoryName, p.ProductName
+ORDER BY c.CategoryName, TotalSales DESC;
