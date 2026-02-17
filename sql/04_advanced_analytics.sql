@@ -89,3 +89,40 @@ JOIN orders o ON c.CustomerID = o.CustomerID
 JOIN order_details od ON o.OrderID = od.OrderID
 GROUP BY c.CompanyName
 ORDER BY lifetime_value DESC;
+
+
+-- Materialized view: total revenue per month
+
+CREATE MATERIALIZED VIEW mv_monthly_revenue AS
+SELECT
+    DATE_TRUNC('month', OrderDate) AS month,
+    SUM(Quantity * UnitPrice * (1 - Discount)) AS total_revenue
+FROM fact_orders
+GROUP BY DATE_TRUNC('month', OrderDate)
+ORDER BY month;
+
+-- Materialized view: total revenue per customer
+
+CREATE MATERIALIZED VIEW mv_customer_revenue AS
+SELECT
+    CustomerID,
+    SUM(Quantity * UnitPrice * (1 - Discount)) AS total_revenue
+FROM fact_orders
+GROUP BY CustomerID
+ORDER BY total_revenue DESC;
+
+-- Materialized view: total revenue per product
+
+CREATE MATERIALIZED VIEW mv_product_revenue AS
+SELECT
+    ProductID,
+    SUM(Quantity * UnitPrice * (1 - Discount)) AS total_revenue
+FROM fact_orders
+GROUP BY ProductID
+ORDER BY total_revenue DESC;
+
+-- Refresh all materialized views immediately
+
+REFRESH MATERIALIZED VIEW mv_monthly_revenue;
+REFRESH MATERIALIZED VIEW mv_customer_revenue;
+REFRESH MATERIALIZED VIEW mv_product_revenue;
