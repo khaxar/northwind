@@ -63,3 +63,42 @@ JOIN orders o ON c.CustomerID = o.CustomerID
 GROUP BY c.CompanyName
 HAVING COUNT(DISTINCT o.OrderID) > 1
 ORDER BY years_active DESC, total_orders DESC;
+
+
+-- Rank customers by total revenue
+
+SELECT
+    c.CustomerID,
+    c.CompanyName,
+    SUM(f.Quantity * f.UnitPrice * (1 - f.Discount)) AS total_revenue,
+    RANK() OVER (ORDER BY SUM(f.Quantity * f.UnitPrice * (1 - f.Discount)) DESC) AS revenue_rank
+FROM fact_orders f
+JOIN dim_customers c ON f.CustomerID = c.CustomerID
+GROUP BY c.CustomerID, c.CompanyName
+ORDER BY revenue_rank
+LIMIT 20;
+
+
+-- Top 10% customers by number of orders
+
+SELECT
+    CustomerID,
+    COUNT(OrderID) AS num_orders,
+    NTILE(10) OVER (ORDER BY COUNT(OrderID) DESC) AS decile_rank
+FROM fact_orders
+GROUP BY CustomerID
+ORDER BY decile_rank, num_orders DESC;
+
+
+-- Employee performance by revenue and orders handled
+
+SELECT
+    e.EmployeeID,
+    e.employee,
+    SUM(f.Quantity * f.UnitPrice * (1 - f.Discount)) AS total_revenue,
+    COUNT(DISTINCT f.OrderID) AS total_orders,
+    RANK() OVER (ORDER BY SUM(f.Quantity * f.UnitPrice * (1 - f.Discount)) DESC) AS revenue_rank
+FROM fact_orders f
+JOIN dim_employees e ON f.EmployeeID = e.EmployeeID
+GROUP BY e.EmployeeID, e.employee
+ORDER BY revenue_rank;

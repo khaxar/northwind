@@ -126,3 +126,30 @@ ORDER BY total_revenue DESC;
 REFRESH MATERIALIZED VIEW mv_monthly_revenue;
 REFRESH MATERIALIZED VIEW mv_customer_revenue;
 REFRESH MATERIALIZED VIEW mv_product_revenue;
+
+
+-- Rank products by total revenue
+
+SELECT
+    p.ProductID,
+    p.ProductName,
+    SUM(f.Quantity * f.UnitPrice * (1 - f.Discount)) AS total_revenue,
+    RANK() OVER (ORDER BY SUM(f.Quantity * f.UnitPrice * (1 - f.Discount)) DESC) AS revenue_rank
+FROM fact_orders f
+JOIN dim_products p ON f.ProductID = p.ProductID
+GROUP BY p.ProductID, p.ProductName
+ORDER BY revenue_rank
+LIMIT 20;
+
+-- Products with highest discount applied
+
+SELECT
+    p.ProductID,
+    p.ProductName,
+    SUM(f.Quantity * f.UnitPrice * f.Discount) AS total_discount_amount,
+    RANK() OVER (ORDER BY SUM(f.Quantity * f.UnitPrice * f.Discount) DESC) AS discount_rank
+FROM fact_orders f
+JOIN dim_products p ON f.ProductID = p.ProductID
+GROUP BY p.ProductID, p.ProductName
+ORDER BY discount_rank
+LIMIT 20;
