@@ -153,3 +153,53 @@ JOIN dim_products p ON f.ProductID = p.ProductID
 GROUP BY p.ProductID, p.ProductName
 ORDER BY discount_rank
 LIMIT 20;
+
+
+-- Monthly revenue
+
+SELECT
+    DATE_TRUNC('month', OrderDate) AS month,
+    SUM(Quantity * UnitPrice * (1 - Discount)) AS total_revenue
+FROM fact_orders
+GROUP BY month
+ORDER BY month;
+
+-- Moving Average (3-month) for Monthly Revenue
+
+SELECT
+    month,
+    total_revenue,
+    AVG(total_revenue) OVER (
+        ORDER BY month
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    ) AS moving_avg_3_month
+FROM (
+    SELECT
+        DATE_TRUNC('month', OrderDate) AS month,
+        SUM(Quantity * UnitPrice * (1 - Discount)) AS total_revenue
+    FROM fact_orders
+    GROUP BY month
+) sub
+ORDER BY month;
+
+-- Quarterly Revenue Trend
+
+SELECT
+    DATE_TRUNC('quarter', OrderDate) AS quarter,
+    SUM(Quantity * UnitPrice * (1 - Discount)) AS total_revenue
+FROM fact_orders
+GROUP BY quarter
+ORDER BY quarter;
+
+-- Peak Months by Revenue
+
+SELECT
+    DATE_TRUNC('month', OrderDate) AS month,
+    SUM(Quantity * UnitPrice * (1 - Discount)) AS total_revenue,
+    RANK() OVER (ORDER BY SUM(Quantity * UnitPrice * (1 - Discount)) DESC) AS revenue_rank
+FROM fact_orders
+GROUP BY month
+ORDER BY revenue_rank
+LIMIT 5;
+
+
