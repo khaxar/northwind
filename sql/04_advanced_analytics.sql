@@ -202,4 +202,64 @@ GROUP BY month
 ORDER BY revenue_rank
 LIMIT 5;
 
+-- Cohort: month of first order per customer
 
+WITH first_order AS (
+    SELECT
+        CustomerID,
+        MIN(DATE_TRUNC('month', OrderDate)) AS first_order_month
+    FROM fact_orders
+    GROUP BY CustomerID
+)
+SELECT *
+FROM first_order
+ORDER BY first_order_month;
+
+-- Orders per customer relative to their cohort month
+
+WITH first_order AS (
+    SELECT
+        CustomerID,
+        MIN(DATE_TRUNC('month', OrderDate)) AS first_order_month
+    FROM fact_orders
+    GROUP BY CustomerID
+),
+customer_orders AS (
+    SELECT
+        f.CustomerID,
+        DATE_TRUNC('month', f.OrderDate) AS order_month,
+        EXTRACT(MONTH FROM AGE(DATE_TRUNC('month', f.OrderDate), fo.first_order_month)) AS months_since_first_order
+    FROM fact_orders f
+    JOIN first_order fo ON f.CustomerID = fo.CustomerID
+)
+SELECT
+    months_since_first_order,
+    COUNT(DISTINCT CustomerID) AS active_customers
+FROM customer_orders
+GROUP BY months_since_first_order
+ORDER BY months_since_first_order;
+
+-- Retention rate per cohort month
+
+WITH first_order AS (
+    SELECT
+        CustomerID,
+        MIN(DATE_TRUNC('month', OrderDate)) AS cohort_month
+    FROM fact_orders
+    GROUP BY CustomerID
+),
+cohort_orders AS (
+    SELECT
+        f.CustomerID,
+        fo.cohort_month,
+        DATE_TRUNC('month', f.OrderDate) AS order_month
+    FROM fact_orders f
+    JOIN first_order fo ON f.CustomerID = fo.CustomerID
+)
+SELECT
+    cohort_month,
+    DATE_PART('month', order_month) - DATE_PART('month', cohort_month) AS months_since_cohort,
+    COUNT(DISTINCT CustomerID) AS active_customers
+FROM cohort_orders
+GROUP BY cohort_month, months_since_cohort
+ORDER BY cohort_month, months_since_cohort;
