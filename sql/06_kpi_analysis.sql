@@ -102,3 +102,55 @@ FROM fact_orders f
 JOIN dim_employees e ON f.EmployeeID = e.EmployeeID
 GROUP BY e.EmployeeID, e.employee
 ORDER BY revenue_rank;
+
+
+-- Revenue vs Discount Impact by Product
+
+SELECT
+    p.ProductID,
+    p.ProductName,
+    SUM(f.Quantity * f.UnitPrice) AS gross_revenue,
+    SUM(f.Quantity * f.UnitPrice * f.Discount) AS total_discount,
+    SUM(f.Quantity * f.UnitPrice * (1 - f.Discount)) AS net_revenue,
+    ROUND(
+        SUM(f.Quantity * f.UnitPrice * f.Discount) 
+        / NULLIF(SUM(f.Quantity * f.UnitPrice), 0) * 100,
+        2
+    ) AS discount_percentage
+FROM fact_orders f
+JOIN dim_products p ON f.ProductID = p.ProductID
+GROUP BY p.ProductID, p.ProductName
+ORDER BY discount_percentage DESC;
+
+-- High Revenue, Low Repeat Customers
+
+WITH customer_stats AS (
+    SELECT
+        CustomerID,
+        COUNT(DISTINCT OrderID) AS total_orders,
+        SUM(Quantity * UnitPrice * (1 - Discount)) AS total_revenue
+    FROM fact_orders
+    GROUP BY CustomerID
+)
+SELECT *
+FROM customer_stats
+WHERE total_orders = 1
+ORDER BY total_revenue DESC
+LIMIT 20;
+
+-- Employee Efficiency Score
+
+SELECT
+    e.EmployeeID,
+    e.employee,
+    COUNT(DISTINCT f.OrderID) AS total_orders,
+    SUM(f.Quantity * f.UnitPrice * (1 - f.Discount)) AS total_revenue,
+    ROUND(
+        SUM(f.Quantity * f.UnitPrice * (1 - f.Discount)) 
+        / NULLIF(COUNT(DISTINCT f.OrderID), 0),
+        2
+    ) AS revenue_per_order
+FROM fact_orders f
+JOIN dim_employees e ON f.EmployeeID = e.EmployeeID
+GROUP BY e.EmployeeID, e.employee
+ORDER BY revenue_per_order DESC;
